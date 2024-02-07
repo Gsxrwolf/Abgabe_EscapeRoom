@@ -62,7 +62,7 @@ namespace Escape_Room
         /// Retrieves the current type of the object
         ///</summary>
         ///<returns>The current type of the object</returns>
-        public string GetObjectType()
+        public string GetCurrentType()
         {
             return type;
         }
@@ -191,14 +191,12 @@ namespace Escape_Room
         static int areaSizeY;
         static int playerXPosition;
         static int playerYPosition;
-        static int keyXPosition;
-        static int keyYPosition;
         static int doorXPosition;
         static int doorYPosition;
         static bool menu = true;
         static bool tutorialDone = false;
         static bool settingDone = false;
-        static bool FrAnt = false;
+        static bool validInput = false;
         static bool gotKey = false;
         static bool roundRunning = true;
         static bool playGame = true;
@@ -222,15 +220,16 @@ namespace Escape_Room
             // Set console buffer size and window size for better display
             Console.SetBufferSize(2000, 2000);
             Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight);
-            // Hide the cursor to provide a cleaner interface
-            Console.CursorVisible = false;
 
             // Loop until the user quits the game
             while (menu)
             {
-                FrAnt = false;
-                // Loop until a valid menu option is selected
-                while (FrAnt == false)
+                // Hide the cursor to provide a cleaner interface
+                Console.CursorVisible = false;
+                validInput = false;
+
+                // Display menu options and handle user input
+                while (validInput == false)
                 {
                     // Display the main menu options
                     TextAnimate("MENU\n\n");
@@ -239,7 +238,6 @@ namespace Escape_Room
                     TextAnimate("[T]utorial\n");
                     TextAnimate("[O]ptions\n");
                     TextAnimate("[Q]uit\n");
-                    // Read user input
                     ConsoleKeyInfo input = Console.ReadKey(true);
                     switch (input.Key)
                     {
@@ -249,7 +247,7 @@ namespace Escape_Room
                                 Console.Clear();
                                 StartRound();
                                 playGame = true;
-                                FrAnt = true;
+                                validInput = true;
                                 break;
                             }
                         // Display the scoreboard
@@ -257,7 +255,7 @@ namespace Escape_Room
                             {
                                 Console.Clear();
                                 PrintScoreboard();
-                                FrAnt = true;
+                                validInput = true;
                                 break;
                             }
                         // Display the tutorial
@@ -266,7 +264,7 @@ namespace Escape_Room
                                 Console.Clear();
                                 Introduction();
                                 tutorialDone = true;
-                                FrAnt = true;
+                                validInput = true;
                                 break;
                             }
                         // Set game options
@@ -275,7 +273,7 @@ namespace Escape_Room
                                 Console.Clear();
                                 playArea = DeclareGameArea();
                                 settingDone = true;
-                                FrAnt = true;
+                                validInput = true;
                                 break;
                             }
                         // Quit the game
@@ -285,7 +283,7 @@ namespace Escape_Room
                                 TextAnimateTime("Ok bye", 2000);
                                 Console.Clear();
                                 menu = false;
-                                FrAnt = true;
+                                validInput = true;
                                 break;
                             }
                         // Handle invalid input
@@ -293,7 +291,7 @@ namespace Escape_Room
                             {
                                 Console.Clear();
                                 TextAnimateTime("Invalid input please try again", 1000);
-                                FrAnt = false;
+                                validInput = false;
                                 break;
                             }
                     }
@@ -303,7 +301,7 @@ namespace Escape_Room
 
 
         ///<summary>
-        ///Provides an introduction and tutorial for the game, explaining controls, objectives, and options.
+        ///Provides an introduction and tutorial for the game, explaining controls, objectives, and options
         ///</summary>
         public static void Introduction()
         {
@@ -456,14 +454,12 @@ namespace Escape_Room
                 if (IsInnerArea(x, y) && playerXPosition != x && playerYPosition != y)
                 {
                     playArea[x, y].ChangeObjectType("Key");
-                    keyXPosition = x;
-                    keyYPosition = y;
                     done = true;
                 }
             } while (!IsInnerArea(x, y) || done == false);
 
 
-            //Add Door at valid random place
+            // Add Door at valid random place
             done = false;
             do
             {
@@ -486,20 +482,21 @@ namespace Escape_Room
         /// Controls the movement of the player within the play area based on user input
         /// </summary>
         /// <param name="playArea">The 2D array representing the play area</param>
-        /// <returns>The updated play area after player movement</returns>
+        /// <returns>The updated play area after player input</returns>
         public static Objects[,] PlayerController(Objects[,] playArea)
         {
-            //Gets player input from the InputManager
+            // Gets player input from the InputManager
             ConsoleKeyInfo input = new ConsoleKeyInfo();
             if (inputManager.KeyPressed())
             {
                 input = inputManager.ReadKey();
             }
-            //Checks the input and performs corresponding actions
+            // Checks the input and performs corresponding actions
             switch (input.Key)
             {
                 case ConsoleKey.Escape:
                     {
+                        // End the current round if the Escape key is pressed
                         stopwatch.Stop();
                         roundRunning = false;
                         break;
@@ -510,25 +507,23 @@ namespace Escape_Room
                         // Check if the player does not have the key and is trying to move to the door position
                         if (gotKey == false && playerXPosition == doorXPosition && playerYPosition - 1 == doorYPosition)
                         {
-                            // Display a message prompting the player to pick up the key first
                             TextAnimateTime("First pick up the key", 1000);
                         }
                         else
                         {
                             // Check if the object above the player is a key
-                            if (playArea[playerXPosition, playerYPosition - 1].GetObjectType() == "Key")
+                            if (playArea[playerXPosition, playerYPosition - 1].GetCurrentType() == "Key")
                             {
-                                // Replace the key object with the player object
+                                // Process player interaction with the key
                                 playArea[playerXPosition, playerYPosition - 1].RecoverLastType();
                                 playArea[playerXPosition, playerYPosition - 1].ChangeObjectType("Player");
-                                // Update player position and indicate that the player has the key
                                 playArea[playerXPosition, playerYPosition].RecoverLastType();
                                 playerYPosition = playerYPosition - 1;
                                 gotKey = true;
                                 break;
                             }
-                            // Check if the player can move to the position above
-                            else if (playArea[playerXPosition, playerYPosition - 1].GetObjectType() != "Wall")
+                            // Check if the object above the player is a wall
+                            else if (playArea[playerXPosition, playerYPosition - 1].GetCurrentType() != "Wall")
                             {
                                 // Move the player up by changing the object type at the new position
                                 playArea[playerXPosition, playerYPosition - 1].ChangeObjectType("Player");
@@ -556,7 +551,7 @@ namespace Escape_Room
                         }
                         else
                         {
-                            if (playArea[playerXPosition, playerYPosition + 1].GetObjectType() == "Key")
+                            if (playArea[playerXPosition, playerYPosition + 1].GetCurrentType() == "Key")
                             {
                                 playArea[playerXPosition, playerYPosition + 1].RecoverLastType();
                                 playArea[playerXPosition, playerYPosition + 1].ChangeObjectType("Player");
@@ -565,7 +560,7 @@ namespace Escape_Room
                                 gotKey = true;
                                 break;
                             }
-                            else if (playArea[playerXPosition, playerYPosition + 1].GetObjectType() != "Wall")
+                            else if (playArea[playerXPosition, playerYPosition + 1].GetCurrentType() != "Wall")
                             {
                                 playArea[playerXPosition, playerYPosition + 1].ChangeObjectType("Player");
                                 playArea[playerXPosition, playerYPosition].RecoverLastType();
@@ -592,7 +587,7 @@ namespace Escape_Room
                         else
                         {
 
-                            if (playArea[playerXPosition + 1, playerYPosition].GetObjectType() == "Key")
+                            if (playArea[playerXPosition + 1, playerYPosition].GetCurrentType() == "Key")
                             {
                                 playArea[playerXPosition + 1, playerYPosition].RecoverLastType();
                                 playArea[playerXPosition + 1, playerYPosition].ChangeObjectType("Player");
@@ -601,7 +596,7 @@ namespace Escape_Room
                                 gotKey = true;
                                 break;
                             }
-                            else if (playArea[playerXPosition + 1, playerYPosition].GetObjectType() != "Wall")
+                            else if (playArea[playerXPosition + 1, playerYPosition].GetCurrentType() != "Wall")
                             {
                                 playArea[playerXPosition + 1, playerYPosition].ChangeObjectType("Player");
                                 playArea[playerXPosition, playerYPosition].RecoverLastType();
@@ -628,7 +623,7 @@ namespace Escape_Room
                         else
                         {
 
-                            if (playArea[playerXPosition - 1, playerYPosition].GetObjectType() == "Key")
+                            if (playArea[playerXPosition - 1, playerYPosition].GetCurrentType() == "Key")
                             {
                                 playArea[playerXPosition - 1, playerYPosition].RecoverLastType();
                                 playArea[playerXPosition - 1, playerYPosition].ChangeObjectType("Player");
@@ -637,7 +632,7 @@ namespace Escape_Room
                                 gotKey = true;
                                 break;
                             }
-                            else if (playArea[playerXPosition - 1, playerYPosition].GetObjectType() != "Wall")
+                            else if (playArea[playerXPosition - 1, playerYPosition].GetCurrentType() != "Wall")
                             {
                                 playArea[playerXPosition - 1, playerYPosition].ChangeObjectType("Player");
                                 playArea[playerXPosition, playerYPosition].RecoverLastType();
@@ -718,8 +713,8 @@ namespace Escape_Room
                 TextAnimateTime("Congratulations you successfully escaped in " + time + " seconds", 2000);
 
                 // Prompt the player to start a new round or not
-                FrAnt = false;
-                while (FrAnt == false)
+                validInput = false;
+                while (validInput == false)
                 {
                     TextAnimate("Start a new round?\n");
                     TextAnimate("[Y]es, [N]o\n");
@@ -733,7 +728,7 @@ namespace Escape_Room
                                 playGame = true;
                                 roundRunning = true;
                                 gotKey = false;
-                                FrAnt = true;
+                                validInput = true;
                                 Console.Clear();
                                 break;
                             }
@@ -744,7 +739,7 @@ namespace Escape_Room
                                 playGame = false;
                                 roundRunning = true;
                                 gotKey = false;
-                                FrAnt = true;
+                                validInput = true;
                                 Console.Clear();
                                 break;
                             }
@@ -752,7 +747,7 @@ namespace Escape_Room
                             {
                                 Console.Clear();
                                 TextAnimateTime("Please answer with [Y]es or [N]o", 1000);
-                                FrAnt = false;
+                                validInput = false;
                             }
                             break;
                     }
@@ -769,6 +764,8 @@ namespace Escape_Room
             // Loop through each row of the play area
             for (int y = 0; y < areaSizeX; y++)
             {
+
+                // Initialize strings for each line of the play area
                 string Line1 = "";
                 string Line2 = "";
                 string Line3 = "";
@@ -780,31 +777,31 @@ namespace Escape_Room
                     Objects printObject = playArea[x, y];
 
                     // Determine the type of object and represent it accordingly
-                    if (printObject.GetObjectType() == "Player")
+                    if (printObject.GetCurrentType() == "Player")
                     {
                         Line1 = Line1 + "  ---  ";
                         Line2 = Line2 + " | X | ";
                         Line3 = Line3 + "  ---  ";
                     }
-                    else if (printObject.GetObjectType() == "Key")
+                    else if (printObject.GetCurrentType() == "Key")
                     {
                         Line1 = Line1 + "  ---  ";
                         Line2 = Line2 + " | K | ";
                         Line3 = Line3 + "  ---  ";
                     }
-                    else if (printObject.GetObjectType() == "Door")
+                    else if (printObject.GetCurrentType() == "Door")
                     {
                         Line1 = Line1 + "  ---  ";
                         Line2 = Line2 + " |   | ";
                         Line3 = Line3 + " |  °| ";
                     }
-                    else if (printObject.GetObjectType() == "Wall")
+                    else if (printObject.GetCurrentType() == "Wall")
                     {
                         Line1 = Line1 + " ■ ■ ■ ";
                         Line2 = Line2 + " ■ ■ ■ ";
                         Line3 = Line3 + " ■ ■ ■ ";
                     }
-                    else if (printObject.GetObjectType() == "Floor")
+                    else if (printObject.GetCurrentType() == "Floor")
                     {
                         Line1 = Line1 + "  ---  ";
                         Line2 = Line2 + " |   | ";
@@ -812,7 +809,7 @@ namespace Escape_Room
                     }
                 }
 
-                // Print the lines representing each row of the play area
+                // Print each line of the play area
                 Console.WriteLine(Line1);
 
                 // Colorize the key and player and checks which color should be used
@@ -828,8 +825,7 @@ namespace Escape_Room
                     ConsoleColor[] colorArray = { ConsoleColor.Red, ConsoleColor.Blue };
                     ColorLettersInTextLine(Line2, replaceArray, colorArray);
                 }
-
-                // Print the lines representing each row of the play area
+                // Print each line of the play area
                 Console.WriteLine(Line3);
             }
         }
@@ -856,9 +852,9 @@ namespace Escape_Room
                 // Sort the scoreboard based on round completion time
                 scoreBoard.Sort((r1, r2) => r1.GetTime().CompareTo(r2.GetTime()));
 
-                FrAnt = false;
+                validInput = false;
                 // Display options until the user makes a valid choice
-                while (FrAnt == false)
+                while (validInput == false)
                 {
                     Console.Clear();
                     Console.Write("SCOREBOARD\n\n");
@@ -870,7 +866,7 @@ namespace Escape_Room
                         // Display all rounds on the scoreboard
                         case ConsoleKey.A:
                             {
-                                FrAnt = true;
+                                validInput = true;
                                 Console.Clear();
                                 Console.Write("SCOREBOARD\n\n");
                                 int counter = 1;
@@ -889,7 +885,7 @@ namespace Escape_Room
                         // Display rounds for a specific play area size chosen by the user
                         case ConsoleKey.S:
                             {
-                                FrAnt = true;
+                                validInput = true;
                                 Console.Clear();
                                 Console.Write("SCOREBOARD\n\n");
                                 TextAnimate("Which play area size do you want to display?\n");
@@ -942,7 +938,7 @@ namespace Escape_Room
                             {
                                 Console.Clear();
                                 TextAnimateTime("Please answer with [A]ll or [S]pecific", 1000);
-                                FrAnt = false;
+                                validInput = false;
                             }
                             break;
                     }
